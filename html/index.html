@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RareBridge RWE｜罕见病真实世界证据 合规化运营平台</title>
+    <!-- 引入指定的字体：Inter 和 思源黑体 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;900&family=Noto+Sans+SC:wght@400;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        /* ================= 视觉规范与全局变量 ================= */
+        :root {
+            /* 配色体系 */
+            --primary-color: #0A3D62;    /* 深海蓝：医疗专业感 */
+            --bg-light: #F5F7FA;         /* 浅银灰：辅助底色/留白质感 */
+            --accent-color: #D4AF37;     /* 铂金色：强调色/高端质感 */
+            --text-main: #2C3E50;        /* 正文颜色 */
+            --text-muted: #7F8C8D;       /* 辅助小字颜色 */
+            --border-color: #E2E8F0;     /* 极浅灰边框 */
+            
+            /* 排版间距 */
+            --container-width: 1200px;
+            --section-spacing: 60px;
+            --module-spacing: 40px;
+            --p-spacing: 24px;
+        }
+
+        /* 基础重置 */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Inter', 'Noto Sans SC', sans-serif;
+            color: var(--text-main);
+            background-color: #FFFFFF; /* 70%留白核心 */
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* 加载时禁止页面上下滚动 */
+        body.no-scroll {
+            overflow: hidden; 
+        }
+
+        /* ================= 【新增】开屏加载动画 (Splash Screen) ================= */
+        #splash-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: var(--primary-color); /* 完美的深海蓝背景 */
+            z-index: 999999; /* 保证它覆盖在网站所有东西的最上面 */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.8s ease, visibility 0.8s ease;
+        }
+
+        /* SVG 容器设定 */
+        .splash-logo svg {
+            width: 800px;
+            max-width: 90vw;
+            height: 150px;
+        }
+
+        /* 缓慢拼写描边动画的核心逻辑 */
+        .splash-text-svg {
+            font-family: 'Inter', sans-serif;
+            font-size: 72px;
+            font-weight: 900;
+            fill: transparent; /* 初始内部透明 */
+            stroke: #FFFFFF;   /* 白色的描边边框 */
+            stroke-width: 1.5px;
+            stroke-dasharray: 1200;
+            stroke-dashoffset: 1200;
+            /* 2.5秒缓慢画出边框，然后第2.5秒时花1秒钟填充内部白色 */
+            animation: drawLogo 2.5s cubic-bezier(0.4, 0, 0.2, 1) forwards, 
+                       fillLogo 1s ease-in-out 2.5s forwards;
+        }
+
+        /* 动画：画出轮廓 */
+        @keyframes drawLogo {
+            0% { stroke-dashoffset: 1200; }
+            100% { stroke-dashoffset: 0; }
+        }
+
+        /* 动画：填充亮起 */
+        @keyframes fillLogo {
+            0% { fill: transparent; stroke: #FFFFFF; }
+            100% { 
+                fill: #FFFFFF; 
+                stroke: transparent; 
+                filter: drop-shadow(0 0 15px rgba(255,255,255,0.2)); 
+            }
+        }
+
+        /* 下方进度条区域 */
+        .splash-loading-container {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            opacity: 0;
+            animation: fadeIn 0.5s ease 0.5s forwards; /* 延时0.5秒出现 */
+        }
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+
+        /* 进度条底槽 */
+        .splash-progress-bar {
+            width: 260px;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+            border-radius: 2px;
+        }
+
+        /* 进度条铂金色填充 */
+        .splash-progress-fill {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            background: var(--accent-color);
+            width: 0%;
+            /* 模拟真实的读取停顿感 */
+            animation: loadProgress 3.2s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+        }
+
+        @keyframes loadProgress {
+            0% { width: 0%; }
+            20% { width: 30%; }
+            60% { width: 75%; }
+            100% { width: 100%; }
+        }
+
+        /* 底部状态文字（模拟系统加载中） */
+        .splash-status-text {
+            font-family: 'Menlo', 'Courier New', monospace;
+            color: var(--accent-color);
+            font-size: 12px;
+            margin-top: 12px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .splash-status-text::after {
+            content: '';
+            animation: dots 1.5s infinite steps(4, end);
+        }
+        
+        @keyframes dots {
+            0%, 20% { content: ''; }
+            40% { content: '.'; }
+            60% { content: '..'; }
+            80%, 100% { content: '...'; }
+        }
+        /* ================= 动画 CSS 结束 ================= */
+
+
+        /* 字体层级规范 */
+        h1, h2, h3 { font-family: 'Inter', 'Noto Sans SC', sans-serif; font-weight: 900; color: var(--primary-color); }
+        h1 { font-size: 36px; margin-bottom: var(--module-spacing); }
+        h2 { font-size: 28px; margin-bottom: 20px; }
+        h3 { font-size: 22px; margin-bottom: 16px; }
+        p { font-size: 16px; margin-bottom: var(--p-spacing); font-weight: 400; }
+        .aux-text { font-size: 14px; color: var(--text-muted); }
+        .note-text { font-size: 12px; color: var(--text-muted); }
+        .mono-text { font-family: 'Menlo', 'Courier New', monospace; font-size: 14px; color: var(--primary-color); background: var(--bg-light); padding: 2px 6px; border-radius: 2px;}
+
+        /* 强调色文字 */
+        .text-accent { color: var(--accent-color); }
+        .text-bold { font-weight: 700; }
+
+        /* 布局格式 - 通栏与栅格 */
+        .container {
+            max-width: var(--container-width);
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        .grid-12 {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: var(--module-spacing);
+        }
+        .col-3 { grid-column: span 3; }
+        .col-4 { grid-column: span 4; }
+        .col-6 { grid-column: span 6; }
+        .col-8 { grid-column: span 8; }
+        .col-12 { grid-column: span 12; }
+
+        /* 通用Section */
+        section { padding: 80px 0; border-bottom: 1px solid var(--border-color); }
+        .section-header { text-align: center; max-width: 800px; margin: 0 auto 60px; }
+
+        /* 按钮规范 */
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center;
+            padding: 14px 32px; font-size: 16px; font-weight: 700;
+            border-radius: 3px; cursor: pointer; transition: all 0.3s ease;
+            text-decoration: none; border: none;
+        }
+        .btn-primary { background-color: var(--primary-color); color: #FFF; }
+        .btn-primary:hover { background-color: #072b47; transform: translateY(-1px); }
+        .btn-accent { background-color: var(--accent-color); color: #FFF; }
+        .btn-accent:hover { background-color: #bfa035; transform: translateY(-1px); }
+
+        /* ================= 模块定制样式 ================= */
+        
+        /* 导航栏 */
+        header { border-bottom: 1px solid var(--border-color); position: sticky; top: 0; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); z-index: 100; }
+        .nav-inner { display: flex; justify-content: space-between; align-items: center; height: 80px; }
+        .logo { font-size: 24px; font-weight: 900; color: var(--primary-color); letter-spacing: -0.5px; }
+        .nav-links { display: flex; gap: 40px; }
+        .nav-links a { text-decoration: none; color: var(--text-main); font-size: 14px; font-weight: 700; transition: color 0.3s; }
+        .nav-links a:hover { color: var(--accent-color); }
+
+        /* Hero区 */
+        .hero {
+            background: linear-gradient(135deg, rgba(10,61,98,0.95) 0%, rgba(10,61,98,0.8) 100%), 
+                        radial-gradient(circle at 50% 50%, rgba(255,255,255,0.05) 1px, transparent 1px);
+            background-size: cover, 30px 30px;
+            padding: 120px 0; text-align: center; color: #FFF; border-bottom: none;
+        }
+        .hero h1 { color: #FFF; font-size: 36px; margin-bottom: 24px; }
+        .hero .subtitle { font-size: 20px; color: var(--bg-light); opacity: 0.9; margin-bottom: 48px; font-weight: 400; max-width: 800px; margin-left: auto; margin-right: auto; }
+        .hero-btns { display: flex; gap: 20px; justify-content: center; }
+
+        /* 卡片设计 */
+        .card {
+            background: #FFF; border: 1px solid var(--border-color); padding: 40px;
+            border-radius: 3px; transition: box-shadow 0.3s ease, transform 0.3s ease;
+        }
+        .card:hover { box-shadow: 0 10px 30px rgba(10,61,98,0.05); transform: translateY(-2px); }
+        .card-icon { width: 48px; height: 48px; margin-bottom: 24px; }
+        
+        /* 流程图样式 */
+        .flowchart { display: flex; justify-content: space-between; align-items: center; padding: 40px; background: var(--bg-light); border-radius: 3px; margin-bottom: 60px; }
+        .flow-node { text-align: center; flex: 1; }
+        .flow-node-box { background: #FFF; border: 1px solid var(--primary-color); padding: 16px; border-radius: 3px; font-weight: 700; font-size: 14px; color: var(--primary-color); }
+        .flow-arrow { width: 40px; height: 2px; background: var(--primary-color); position: relative; margin: 0 15px; }
+        .flow-arrow::after { content: ''; position: absolute; right: 0; top: -4px; border-top: 5px solid transparent; border-bottom: 5px solid transparent; border-left: 6px solid var(--primary-color); }
+
+        /* 核心壁垒高亮块 */
+        .highlight-block { background: rgba(212, 175, 55, 0.05); border-left: 4px solid var(--accent-color); padding: 32px; margin-top: 40px; }
+        .highlight-block h3 { color: var(--accent-color); margin-bottom: 12px; }
+        
+        /* 列表项 */
+        ul.styled-list { list-style: none; }
+        ul.styled-list li { position: relative; padding-left: 24px; margin-bottom: 16px; font-size: 14px; }
+        ul.styled-list li::before { content: '■'; position: absolute; left: 0; color: var(--primary-color); font-size: 10px; top: 3px; }
+
+        /* 深色卡片 (药企端) */
+        .card-dark { background: var(--primary-color); color: #FFF; border: none; }
+        .card-dark h3 { color: #FFF; }
+        .card-dark .aux-text { color: rgba(255,255,255,0.6); }
+        .card-dark ul.styled-list li::before { color: var(--accent-color); }
+
+        /* 合规标签 */
+        .compliance-grid { text-align: center; }
+        .comp-item { padding: 32px; border: 1px solid var(--border-color); background: var(--bg-light); }
+        .comp-item svg { margin-bottom: 16px; }
+
+        /* Footer */
+        footer { background: var(--primary-color); color: rgba(255,255,255,0.7); padding: 60px 0 30px; font-size: 14px; }
+        .footer-nav { display: flex; gap: 40px; margin-bottom: 40px; }
+        .footer-nav a { color: #FFF; text-decoration: none; }
+        .footer-bottom { border-top: 1px solid rgba(255,255,255,0.1); padding-top: 30px; display: flex; justify-content: space-between; font-size: 12px; }
+
+        /* 响应式适配 */
+        @media (max-width: 992px) {
+            .col-3 { grid-column: span 6; }
+            .col-4 { grid-column: span 6; }
+            .flowchart { flex-direction: column; gap: 20px; }
+            .flow-arrow { width: 2px; height: 30px; margin: 10px 0; }
+            .flow-arrow::after { top: auto; bottom: -6px; right: -4px; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid var(--primary-color); }
+        }
+        @media (max-width: 768px) {
+            .col-3, .col-4, .col-6 { grid-column: span 12; }
+            .hero h1 { font-size: 28px; }
+            .hero-btns { flex-direction: column; }
+            .nav-links { display: none; }
+        }
+    </style>
+</head>
+<!-- 初始状态给body加上no-scroll，防止加载时用户往下划 -->
+<body class="no-scroll">
+
+    <!-- ================= 【新增】酷炫的开屏加载页 ================= -->
+    <div id="splash-screen">
+        <!-- SVG 文字描边绘制区 -->
+        <div class="splash-logo">
+            <svg viewBox="0 0 800 150">
+                <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" class="splash-text-svg">
+                    RareBridge RWE
+                </text>
+            </svg>
+        </div>
+        <!-- 进度条与加载文本 -->
+        <div class="splash-loading-container">
+            <div class="splash-progress-bar">
+                <div class="splash-progress-fill"></div>
+            </div>
+            <div class="splash-status-text">System Initializing</div>
+        </div>
+    </div>
+    <!-- ================= 开屏加载页结束 ================= -->
+
+
+    <!-- 导航栏 -->
+    <header>
+        <div class="container nav-inner">
+            <div class="logo">RareBridge RWE</div>
+            <nav class="nav-links">
+                <a href="#architecture">产品架构</a>
+                <a href="#flow">业务流转</a>
+                <a href="#compliance">数据合规</a>
+                <a href="#solutions">解决方案</a>
+                <a href="#about">关于我们</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- 2.1 首屏核心模块 -->
+    <section class="hero">
+        <div class="container">
+            <h1>RareBridge RWE<br>罕见病真实世界证据 合规化运营平台</h1>
+            <p class="subtitle">构建双边价值闭环，让罕见病数据转化为监管认可的医疗证据</p>
+           <div class="hero-btns">
+                <a href="parent-portal.html" class="btn btn-primary">家长端入口</a>
+                <a href="enterprise-portal.html" class="btn btn-primary">药企端入口</a>
+                <a href="#compliance" class="btn btn-accent">了解合规体系</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- 2.1.2 核心价值概览区 -->
+    <section style="background: var(--bg-light); padding-top: 60px; padding-bottom: 60px;">
+        <div class="container grid-12">
+            <!-- 卡片1 -->
+            <div class="card col-4">
+                <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="var(--primary-color)" stroke-width="1.5">
+                    <path d="M8 7h12m0 0l-4-4m4 4l-4 4m-4 6H4m0 0l4 4m-4-4l4-4" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <h3>供给端×需求端 价值共生</h3>
+                <p class="aux-text">链接患儿家庭与药企，打破孤岛，彻底破解罕见病研发与诊疗数据匮乏痛点。</p>
+            </div>
+            <!-- 卡片2 -->
+            <div class="card col-4">
+                <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="var(--primary-color)" stroke-width="1.5">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    <rect x="9" y="9" width="6" height="6" rx="1"/>
+                    <path d="M12 12v2" stroke-linecap="round"/>
+                </svg>
+                <h3>全流程合规 数据绝对可控</h3>
+                <p class="aux-text">严格贴合FDA/NMPA监管准则，脱敏加密架构，确保家长拥有100%数据控制权。</p>
+            </div>
+            <!-- 卡片3 -->
+            <div class="card col-4">
+                <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="var(--primary-color)" stroke-width="1.5">
+                    <path d="M9 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-4M9 3v4m0-4h6m-6 4h6m-6 0v4m6-4v4m0-4h4m-4 4h4m-4 4h4m-4 4h4" stroke-linecap="round"/>
+                </svg>
+                <h3>口语数据 → 监管级证据</h3>
+                <p class="aux-text">独创医学NLP引擎+标准编码库，将零散日常记录高效转化为合规RWE成果。</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 3.1 核心商业与数据闭环逻辑 -->
+    <section id="flow">
+        <div class="container">
+            <div class="section-header">
+                <h2>双边市场价值闭环 · 罕见病数据商业化合规路径</h2>
+                <p class="aux-text">RareBridge RWE以罕见病患儿家庭为数据供给核心、药企为需求核心，搭建可控的流转体系，实现“家庭获益、药企降本、监管认可”的三方共赢。</p>
+            </div>
+
+            <!-- 可视化流程图 -->
+            <div class="flowchart">
+                <div class="flow-node"><div class="flow-node-box">家长端<br><span class="note-text">数据供给</span></div></div>
+                <div class="flow-arrow"></div>
+                <div class="flow-node"><div class="flow-node-box">隐私加密层<br><span class="note-text">脱敏授权</span></div></div>
+                <div class="flow-arrow"></div>
+                <div class="flow-node"><div class="flow-node-box" style="border-color: var(--accent-color); color: var(--accent-color);">医学NLP转化<br><span class="note-text">RWE生成</span></div></div>
+                <div class="flow-arrow"></div>
+                <div class="flow-node"><div class="flow-node-box">药企端<br><span class="note-text">数据消费</span></div></div>
+                <div class="flow-arrow"></div>
+                <div class="flow-node"><div class="flow-node-box">合规反哺层<br><span class="note-text">资金/权益反哺</span></div></div>
+            </div>
+
+            <!-- 分端详解 -->
+            <div class="grid-12">
+                <div class="col-6">
+                    <h3 style="border-bottom: 2px solid var(--border-color); padding-bottom: 12px;">供给端：患儿家长 <span class="note-text">(数据贡献者)</span></h3>
+                    <ul class="styled-list" style="margin-top: 24px;">
+                        <li><span class="text-bold">核心诉求：</span>获取专属疾病管理工具、前沿未上市救命药信息、专业诊疗指导，解决信息孤岛问题。</li>
+                        <li><span class="text-bold">参与动力：</span>自愿记录日常病程数据，换取合规化的科研津贴、免费检测、优先用药匹配资格。</li>
+                        <li><span class="text-bold">核心保障：</span>数据全程脱敏加密，无个人身份信息泄露，控制权完全归属家长，授权可随时管控。</li>
+                    </ul>
+                </div>
+                <div class="col-6">
+                    <h3 style="border-bottom: 2px solid var(--border-color); padding-bottom: 12px;">需求端：药企/研发机构 <span class="note-text">(数据使用者)</span></h3>
+                    <ul class="styled-list" style="margin-top: 24px;">
+                        <li><span class="text-bold">核心诉求：</span>获取高质量真实世界数据，搭建外部对照组，缩短上市周期，节省千万级研发成本。</li>
+                        <li><span class="text-bold">付费价值：</span>采购合规RWE报告、外部对照组队列、数据质量分析服务，获取监管认可的证据支撑。</li>
+                        <li><span class="text-bold">合规约束：</span>仅可在授权范围内使用数据，严禁二次泄露、违规商用，全程接受平台监管审计。</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="highlight-block">
+                <h3>核心转化壁垒：跨越口语化与监管级的鸿沟</h3>
+                <p style="margin-bottom: 0;">打破口语化病程记录与医学证据的鸿沟。通过自研医学NLP引擎+国际标准医学库，实现非结构化数据向合规RWE的全自动转化，这是区别于普通医疗社区的核心竞争力。</p>
+            </div>
+            
+            <div style="background: var(--bg-light); padding: 24px; margin-top: 24px; border-radius: 3px;">
+                <h3 style="font-size: 18px;">合规反哺机制详解</h3>
+                <p class="aux-text" style="margin-bottom: 0;">药企付费资金纳入平台专项运营账户，合规定向反哺患儿家庭：以科研津贴、免费基因检测、同情用药申请补贴、疾病管理工具年费减免等形式发放。全程符合医疗监管要求，杜绝商业贿赂风险，形成良性数据循环生态。</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 3.2 产品架构与功能模块逻辑 -->
+    <section id="architecture">
+        <div class="container">
+            <div class="section-header">
+                <h2>双端产品矩阵 · 全场景功能实现逻辑</h2>
+                <p class="aux-text">针对家长端、药企/医疗端两大用户群体，打造精细化功能模块，兼顾易用性与专业性，实现数据采集、转化、应用全流程闭环。</p>
+            </div>
+
+            <div class="grid-12">
+                <!-- 家长端功能区 -->
+                <div class="col-6">
+                    <h3 style="text-align: center; margin-bottom: 40px;">家长端：互助与贡献平台</h3>
+                    
+                    <div class="card" style="margin-bottom: 24px; padding: 30px;">
+                        <h3 style="font-size: 18px;">🔬 功能1：日常症状记录本 (ObsRO) 合规转化</h3>
+                        <p class="note-text">痛点直击：家长口语化记录无法作为监管证据，数据零散无标准。</p>
+                        <ul class="styled-list" style="margin-top: 16px;">
+                            <li><span class="text-bold">多元输入：</span>支持文字打卡、语音录入、快捷勾选。</li>
+                            <li><span class="text-bold">结构化引导：</span>依据病种动态推送国际认证量表（如SMA-CHOP INTEND）。</li>
+                            <li><span class="text-bold">术语映射：</span>对接MedDRA/SNOMED CT，自动将“抽筋”翻译为<span class="mono-text">肌肉痉挛</span>。</li>
+                            <li><span class="text-bold">时间戳固化：</span>生成区块链时间戳，满足FDA CFR 21 Part 11合规要求。</li>
+                        </ul>
+                    </div>
+
+                    <div class="card" style="margin-bottom: 24px; padding: 30px;">
+                        <h3 style="font-size: 18px;">🔬 功能2：同情用药 (Expanded Access) 雷达</h3>
+                        <p class="note-text">痛点直击：罕见病家庭信息闭塞，无法获取未上市救命药渠道。</p>
+                        <ul class="styled-list" style="margin-top: 16px;">
+                            <li><span class="text-bold">全球数据对接：</span>抓取ClinicalTrials.gov等权威库Expanded Access项目。</li>
+                            <li><span class="text-bold">智能精准匹配：</span>基于基因突变靶点、年龄等自动化交叉比对入排标准。</li>
+                            <li><span class="text-bold">申请辅助：</span>生成合规申请信模板及FDA Form 3926填报指引。</li>
+                        </ul>
+                    </div>
+
+                    <div class="card" style="padding: 30px;">
+                        <h3 style="font-size: 18px;">🔬 功能3：数据授权与隐私管家</h3>
+                        <p class="note-text">动态知情同意逻辑（颗粒度授权）</p>
+                        <ul class="styled-list" style="margin-top: 16px;">
+                            <li><span class="text-bold">安全体系：</span>银行级RBAC角色访问控制，多重身份验证。</li>
+                            <li><span class="text-bold">精细化授权管控：</span>支持按机构、用途、时长自定义授权（如允许A药企研发，禁止B商用）。</li>
+                            <li><span class="text-bold">一键实时撤回：</span>云端数据同步脱敏销毁，无残留风险。</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- 药企端功能区 -->
+                <div class="col-6">
+                    <h3 style="text-align: center; margin-bottom: 40px; color: var(--primary-color);">药企/医疗端：证据合成中心</h3>
+                    
+                    <div class="card card-dark" style="margin-bottom: 24px; padding: 30px;">
+                        <h3 style="font-size: 18px;">🏢 功能1：外部对照组 (External Control) 生成器</h3>
+                        <p class="note-text" style="color: rgba(255,255,255,0.6);">痛点直击：罕见病患者基数少，无法开展传统安慰剂试验，伦理风险高。</p>
+                        <ul class="styled-list" style="margin-top: 16px;">
+                            <li><span class="text-bold">自定义队列圈选：</span>输入单臂试验入组标准，快速锁定目标群体。</li>
+                            <li><span class="text-bold">倾向性评分匹配：</span>采用PSM统计算法筛选基线高度匹配的历史数据。</li>
+                            <li><span class="text-bold">合规数据包输出：</span>自动生成<span class="mono-text" style="color: #333;">CDISC SDTM</span>标准格式数据包。</li>
+                        </ul>
+                    </div>
+
+                    <div class="card card-dark" style="margin-bottom: 24px; padding: 30px;">
+                        <h3 style="font-size: 18px;">🏢 功能2：RWE数据标准化引擎</h3>
+                        <p class="note-text" style="color: rgba(255,255,255,0.6);">ETL全流程处理</p>
+                        <ul class="styled-list" style="margin-top: 16px;">
+                            <li><span class="text-bold">提取 (Extract)：</span>整合ObsRO、OCR电子病历等多源数据至合规数据仓。</li>
+                            <li><span class="text-bold">转换 (Transform)：</span>清洗非结构化数据，统一为通用数据元(CDEs)，消除格式差异。</li>
+                            <li><span class="text-bold">加载 (Load)：</span>生成数据字典，明确溯源路径，出具数据质量报告。</li>
+                        </ul>
+                    </div>
+
+                    <div class="card card-dark" style="padding: 30px;">
+                        <h3 style="font-size: 18px;">🏢 功能3：获批风险计算器</h3>
+                        <p class="note-text" style="color: rgba(255,255,255,0.6);">痛点直击：药企无法预判RWE数据监管通过率，盲目研发易驳回。</p>
+                        <ul class="styled-list" style="margin-top: 16px;">
+                            <li><span class="text-bold">监管准则量化：</span>拆解FDA/NMPA指导原则，量化为数据相关性、可靠性评分体系。</li>
+                            <li><span class="text-bold">全方位数据探查：</span>检测数据缺失率、随访中断率、医学编码准确率。</li>
+                            <li><span class="text-bold">可视化评级：</span>生成专业雷达图，标注扣分点，提前规避监管驳回风险。</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 3.3 数据合规与监管体系 -->
+    <section id="compliance" style="background: #FAFAFA;">
+        <div class="container">
+            <div class="section-header">
+                <h2>全链路数据合规 · 筑牢医疗数据信任底线</h2>
+                <p class="aux-text">严格遵循全球医疗数据监管法规，从数据采集、存储、传输、应用到销毁，全流程搭建合规防护体系，保障患儿隐私、药企权益与监管要求三方平衡。</p>
+            </div>
+
+            <!-- 合规标准展示 -->
+            <div class="grid-12 compliance-grid" style="margin-bottom: 60px;">
+                <div class="col-3 comp-item">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--primary-color)" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    <h3 style="font-size: 16px; margin:0;">FDA CFR 21 Part 11</h3>
+                    <p class="note-text" style="margin:8px 0 0;">电子记录合规要求</p>
+                </div>
+                <div class="col-3 comp-item">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--primary-color)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                    <h3 style="font-size: 16px; margin:0;">MedDRA / SNOMED CT</h3>
+                    <p class="note-text" style="margin:8px 0 0;">国际医学编码标准</p>
+                </div>
+                <div class="col-3 comp-item">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--primary-color)" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    <h3 style="font-size: 16px; margin:0;">CDISC SDTM</h3>
+                    <p class="note-text" style="margin:8px 0 0;">数据提交监管标准</p>
+                </div>
+                <div class="col-3 comp-item">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--primary-color)" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    <h3 style="font-size: 16px; margin:0;">HIPAA / GDPR</h3>
+                    <p class="note-text" style="margin:8px 0 0;">医疗数据隐私保护法</p>
+                </div>
+            </div>
+
+            <!-- 全流程合规管控逻辑 -->
+            <div class="grid-12" style="margin-bottom: 60px;">
+                <div class="col-6">
+                    <h3 style="font-size: 18px;">✅ 数据采集合规</h3>
+                    <p class="aux-text">采用动态知情同意机制，全程告知家长数据用途、授权范围。限定病程相关信息采集，严禁无关个人身份信息录入。</p>
+                </div>
+                <div class="col-6">
+                    <h3 style="font-size: 18px;">✅ 数据存储合规</h3>
+                    <p class="aux-text">端到端加密技术，匿名化处理患者数据，剥离隐私信息。数据存储服务器符合医疗机房标准，定期开展安全审计。</p>
+                </div>
+                <div class="col-6">
+                    <h3 style="font-size: 18px;">✅ 数据使用合规</h3>
+                    <p class="aux-text">建立数据使用日志，全程溯源可查，杜绝超范围使用。家长可随时查询数据使用记录、实时撤回授权。</p>
+                </div>
+                <div class="col-6">
+                    <h3 style="font-size: 18px;">✅ 数据销毁合规</h3>
+                    <p class="aux-text">授权到期或家长撤回后，系统自动启动销毁流程，彻底清除云端数据，出具系统销毁证明，绝无备份残留。</p>
+                </div>
+            </div>
+
+            <div style="background: #FFF; border: 1px solid var(--border-color); padding: 40px; text-align: center;">
+                <h3 style="color: var(--primary-color);">核心信任承诺</h3>
+                <p style="margin-bottom: 0; max-width: 800px; margin: 0 auto;">患儿家长拥有数据<span class="text-bold text-accent">100%控制权</span>，平台无权擅自使用数据；所有数据流转全程留痕，接受第三方监管机构审计，坚决守护罕见病家庭隐私安全。</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-nav">
+                <a href="#">产品架构</a>
+                <a href="#">数据合规</a>
+                <a href="#">隐私政策</a>
+                <a href="#">联系我们</a>
+            </div>
+            <div class="footer-bottom">
+                <span>© 2026 RareBridge RWE. 保留所有权利。</span>
+                <span>本平台严格遵循医疗数据与隐私保护合规准则运营。</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- ================= 【新增】开屏加载逻辑控制 ================= -->
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            // 当页面加载完成时，设置一个定时器
+            // 动画总共耗时大概 3.5秒，所以我们在第 3.8秒 时把这个加载屏淡出隐藏
+            setTimeout(() => {
+                const splash = document.getElementById('splash-screen');
+                // 让它透明度变成0
+                splash.style.opacity = '0';
+                splash.style.visibility = 'hidden';
+                
+                // 恢复网页可以上下滑动
+                document.body.classList.remove('no-scroll');
+            }, 3800);
+        });
+    </script>
+
+</body>
+</html>
