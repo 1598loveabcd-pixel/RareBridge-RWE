@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>家长端全交互控制台 - RareBridge RWE</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Noto+Sans+SC:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        /* ================= 全局样式与变量 ================= */
+        :root {
+            --primary-color: #0A3D62;    
+            --bg-light: #F5F7FA;         
+            --accent-color: #D4AF37;     
+            --text-main: #2C3E50;        
+            --text-muted: #7F8C8D;       
+            --border-color: #E2E8F0;     
+            --success-color: #27ae60;    
+            --danger-color: #e74c3c;     
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', 'Noto Sans SC', sans-serif; background: var(--bg-light); display: flex; height: 100vh; overflow: hidden; color: var(--text-main); }
+        
+        /* ================= 左侧导航栏 ================= */
+        .sidebar { width: 260px; background: #FFF; border-right: 1px solid var(--border-color); display: flex; flex-direction: column; z-index: 10; }
+        .logo-area { height: 80px; display: flex; align-items: center; padding: 0 24px; border-bottom: 1px solid var(--border-color); }
+        .logo-area a { font-size: 20px; font-weight: 900; color: var(--primary-color); text-decoration: none; }
+        .nav-menu { padding: 24px 0; flex: 1; }
+        
+        /* 注意这里：加上了 cursor: pointer 让鼠标放上去变成小手 */
+        .nav-item { display: flex; align-items: center; padding: 16px 24px; color: var(--text-muted); text-decoration: none; font-size: 15px; font-weight: 700; transition: 0.3s; border-left: 3px solid transparent; cursor: pointer; }
+        .nav-item svg { margin-right: 12px; }
+        .nav-item:hover, .nav-item.active { background: var(--bg-light); color: var(--primary-color); border-left-color: var(--primary-color); }
+        
+        .user-profile { padding: 24px; border-top: 1px solid var(--border-color); display: flex; align-items: center; }
+        .avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--primary-color); color: #FFF; display: flex; align-items: center; justify-content: center; font-weight: 700; margin-right: 12px; }
+        
+        /* ================= 右侧工作区 ================= */
+        .main-content { flex: 1; overflow-y: auto; position: relative; background: var(--bg-light); }
+        
+        /* 视图切换容器（核心交互CSS：默认隐藏，加 active 才会显示） */
+        .view-section { display: none; padding: 40px; animation: fadeIn 0.4s ease forwards; }
+        .view-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* 公共UI组件 */
+        .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; }
+        .header-top h1 { font-size: 28px; color: var(--primary-color); font-weight: 900; }
+        
+        .btn { padding: 10px 24px; border-radius: 3px; font-weight: 700; cursor: pointer; font-size: 14px; transition: 0.3s; display: inline-flex; align-items: center; justify-content: center; border: none; }
+        .btn-primary { background: var(--primary-color); color: #FFF; }
+        .btn-primary:hover { background: #072b47; }
+        .btn-outline { border: 1px solid var(--border-color); background: #FFF; color: var(--text-main); }
+        .btn-outline:hover { border-color: var(--primary-color); color: var(--primary-color); }
+        .btn-danger { border: 1px solid var(--danger-color); background: #FFF; color: var(--danger-color); }
+        .btn-danger:hover { background: var(--danger-color); color: #FFF; }
+        
+        .card { background: #FFF; border: 1px solid var(--border-color); border-radius: 3px; padding: 30px; margin-bottom: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); }
+        .card-header { border-bottom: 1px solid var(--border-color); padding-bottom: 16px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; }
+        .card-header h3 { color: var(--primary-color); font-size: 18px; font-weight: 900; }
+        
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-bottom: 40px; }
+        .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
+        
+        .badge { font-family: 'Menlo', monospace; font-size: 12px; padding: 4px 8px; border-radius: 2px; font-weight: 700; display: inline-block; }
+        .badge-blue { background: rgba(10,61,98,0.1); color: var(--primary-color); }
+        .badge-green { background: rgba(39, 174, 96, 0.1); color: var(--success-color); }
+        .badge-gold { background: rgba(212, 175, 55, 0.1); color: var(--accent-color); }
+
+        .data-table { width: 100%; border-collapse: collapse; font-size: 14px; text-align: left; }
+        .data-table th { padding: 16px; background: var(--bg-light); color: var(--text-muted); font-weight: 700; border-bottom: 2px solid var(--border-color); }
+        .data-table td { padding: 16px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+        
+        .timeline-item { position: relative; padding-left: 24px; border-left: 2px solid var(--border-color); margin-bottom: 24px; }
+        .timeline-item::before { content: ''; position: absolute; left: -6px; top: 4px; width: 10px; height: 10px; border-radius: 50%; background: var(--primary-color); }
+        .timeline-item h4 { font-size: 16px; margin-bottom: 4px; }
+        .timeline-item p { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; }
+
+        .form-group { margin-bottom: 20px; }
+        .form-label { display: block; font-size: 14px; font-weight: 700; margin-bottom: 8px; color: var(--text-main); }
+        .form-input, .form-select { width: 100%; padding: 12px 16px; border: 1px solid var(--border-color); border-radius: 3px; font-family: inherit; font-size: 14px; background: var(--bg-light); }
+        .form-input:focus { outline: none; border-color: var(--primary-color); background: #FFF; }
+    </style>
+</head>
+<body>
+
+    <!-- ================= 左侧导航栏 ================= -->
+    <div class="sidebar">
+        <div class="logo-area">
+            <!-- 点击Logo返回主页 -->
+            <a href="index.html">RareBridge RWE</a>
+        </div>
+        <div class="nav-menu">
+            <!-- 核心交互点：添加了 onclick="switchTab(...)" 触发JavaScript -->
+            <div class="nav-item active" onclick="switchTab('overview', this)">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                数据总览
+            </div>
+            <div class="nav-item" onclick="switchTab('obsro', this)">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                症状记录本 (ObsRO)
+            </div>
+            <div class="nav-item" onclick="switchTab('radar', this)">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                同情用药匹配雷达
+            </div>
+            <div class="nav-item" onclick="switchTab('privacy', this)">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                数据授权与隐私管家
+            </div>
+        </div>
+        <div class="user-profile">
+            <div class="avatar">轩</div>
+            <div>
+                <div style="font-size: 14px; font-weight: 700;">轩轩妈妈</div>
+                <div style="font-size: 12px; color: var(--text-muted);">脊髓性肌萎缩症(SMA)</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= 右侧工作区 ================= -->
+    <div class="main-content">
+        
+        <!-- 页面 1：数据总览 (Overview) -->
+        <div id="view-overview" class="view-section active">
+            <div class="header-top">
+                <div>
+                    <h1>欢迎回来，轩轩妈妈。</h1>
+                    <p style="color: var(--text-muted); margin-top: 8px;">您已连续记录 <span style="color: var(--primary-color); font-weight: 700;">42</span> 天，您的每一步都在推动罕见病研究。</p>
+                </div>
+                <div>
+                    <button class="btn btn-primary" onclick="document.querySelector('.nav-item:nth-child(2)').click()">+ 去打卡记录</button>
+                </div>
+            </div>
+
+            <div class="grid-3">
+                <div class="card" style="padding: 24px;">
+                    <div style="font-size: 14px; color: var(--text-muted); margin-bottom: 8px; font-weight: 700;">有效医学转化记录</div>
+                    <div style="font-size: 32px; color: var(--primary-color); font-weight: 900;">128 <span style="font-size: 14px; font-weight: 400; color: var(--text-muted);">条已映射</span></div>
+                    <div class="badge badge-green" style="margin-top: 12px;">符合 FDA CFR 21 电子固化</div>
+                </div>
+                <div class="card" style="padding: 24px;">
+                    <div style="font-size: 14px; color: var(--text-muted); margin-bottom: 8px; font-weight: 700;">同情用药雷达探测</div>
+                    <div style="font-size: 32px; color: var(--primary-color); font-weight: 900;">2 <span style="font-size: 14px; font-weight: 400; color: var(--text-muted);">个靶点相符</span></div>
+                    <div class="badge badge-gold" style="margin-top: 12px;">主治医生可介入申请</div>
+                </div>
+                <div class="card" style="padding: 24px;">
+                    <div style="font-size: 14px; color: var(--text-muted); margin-bottom: 8px; font-weight: 700;">科研津贴反哺</div>
+                    <div style="font-size: 32px; color: var(--success-color); font-weight: 900;">¥ 1,200</div>
+                    <div class="badge badge-blue" style="margin-top: 12px;">由 A 跨国药企合规支付</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3>平台近期合规公告</h3>
+                </div>
+                <div class="timeline-item">
+                    <h4>【安全审计】第一季度医疗数据合规审计完成</h4>
+                    <p>时间: 2026-03-15 | 第三方审计机构确认，本平台所有脱敏数据流转均符合 HIPAA 及个人信息保护法要求，0隐私泄露风险。</p>
+                </div>
+                <div class="timeline-item">
+                    <h4>【管线追踪】X药企基于 RWE 数据的 SMA 新药获批临床</h4>
+                    <p>时间: 2026-02-28 | 感谢所有参与历史外部对照组的家庭，您的日常打卡数据成功替代了部分安慰剂组，加速了新药研发。</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 页面 2：症状记录本 (ObsRO) -->
+        <div id="view-obsro" class="view-section">
+            <div class="header-top">
+                <div>
+                    <h1>症状记录本 (ObsRO)</h1>
+                    <p style="color: var(--text-muted); margin-top: 8px;">系统已根据患儿病种，为您自动匹配 <span class="badge badge-blue">SMA-CHOP INTEND 评估量表</span>，请如实记录。</p>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <!-- 左侧打卡表单 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>📋 今日结构化记录</h3>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">1. 头部的直立控制能力 (Head Control)</label>
+                        <select class="form-select">
+                            <option>请选择患儿当前状态...</option>
+                            <option>0分 - 头部无法立起，完全后仰</option>
+                            <option>1分 - 头部偶尔能离开床面</option>
+                            <option>2分 - 坐姿下能维持头部直立 3-5 秒</option>
+                            <option>3分 - 坐姿下能稳定维持头部直立超过 10 秒</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">2. 上肢抓握与抬起 (Arm movement)</label>
+                        <select class="form-select">
+                            <option>请选择患儿当前状态...</option>
+                            <option>0分 - 手臂完全无法对抗重力</option>
+                            <option>1分 - 手指可微小抓握，手臂无法抬起</option>
+                            <option>2分 - 手臂可抬离床面，但无法触及面部</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">3. 补充口语化描述（AI将自动进行医学术语映射）</label>
+                        <textarea class="form-input" rows="4" placeholder="例如：昨天晚上睡觉时腿抽筋了两次，早上起来感觉他没什么力气..."></textarea>
+                    </div>
+                    <button class="btn btn-primary" style="width: 100%;" onclick="alert('数据已提交！正在进行哈希加密上链...')">生成区块链哈希并固化提交</button>
+                    <p style="text-align: center; font-size: 12px; color: var(--text-muted); margin-top: 12px;">提交后生成不可篡改的时间戳，完全符合药监局取证要求</p>
+                </div>
+
+                <!-- 右侧历史记录 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>历史合规记录链</h3>
+                    </div>
+                    <div class="timeline-item">
+                        <h4>CHOP INTEND 得分: 24 / 64</h4>
+                        <p>录入时间: 2026-03-18 09:30 | 记录源: 家长端输入</p>
+                        <div>
+                            <span class="badge badge-blue">MedDRA映射: 肌力减退 (Muscle weakness)</span>
+                            <span class="badge badge-green">区块链存证</span>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <h4>CHOP INTEND 得分: 23 / 64</h4>
+                        <p>录入时间: 2026-03-11 14:15 | 记录源: 家长端输入</p>
+                        <div>
+                            <span class="badge badge-blue">MedDRA映射: 吞咽困难先兆</span>
+                            <span class="badge badge-green">区块链存证</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 页面 3：同情用药匹配雷达 (Radar) -->
+        <div id="view-radar" class="view-section">
+            <div class="header-top">
+                <div>
+                    <h1>同情用药 (Expanded Access) 匹配雷达</h1>
+                    <p style="color: var(--text-muted); margin-top: 8px;">系统实时抓取全球临床试验库，为您搜寻合规的未上市救命药渠道。</p>
+                </div>
+            </div>
+
+            <div class="card" style="background: rgba(10,61,98,0.02); border-left: 4px solid var(--primary-color);">
+                <div style="display: flex; gap: 40px;">
+                    <div>
+                        <span style="font-size: 13px; color: var(--text-muted); display: block;">患儿雷达基线</span>
+                        <span style="font-weight: 900; color: var(--primary-color);">脊髓性肌萎缩症 Type 2</span>
+                    </div>
+                    <div>
+                        <span style="font-size: 13px; color: var(--text-muted); display: block;">SMN2 拷贝数</span>
+                        <span style="font-weight: 900; color: var(--primary-color);">3 拷贝</span>
+                    </div>
+                    <div>
+                        <span style="font-size: 13px; color: var(--text-muted); display: block;">系统匹配算法</span>
+                        <span class="badge badge-blue" style="margin-top: 4px;">AI 高精度筛选运行中</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" style="padding: 0; overflow: hidden;">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>试验编号 / 药品名称</th>
+                            <th>研发机构 / 阶段</th>
+                            <th>入排标准符合率</th>
+                            <th>状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>
+                                <strong>NCT05432109</strong><br>
+                                <span style="font-size: 12px; color: var(--text-muted);">新型基因编辑疗法 (AAV9载体)</span>
+                            </td>
+                            <td>Novartis<br><span style="font-size: 12px; color: var(--text-muted);">Phase 3 / EA Available</span></td>
+                            <td>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <div style="width: 80px; height: 6px; background: var(--bg-light); border-radius: 3px;"><div style="width: 100%; height: 100%; background: var(--success-color); border-radius: 3px;"></div></div>
+                                    <strong style="color: var(--success-color);">100%</strong>
+                                </div>
+                            </td>
+                            <td><span class="badge badge-green">可申请</span></td>
+                            <td><button class="btn btn-primary" style="padding: 6px 16px; font-size: 12px;">生成医生申请信</button></td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <strong>NCT06789123</strong><br>
+                                <span style="font-size: 12px; color: var(--text-muted);">口服小分子剪接调节剂</span>
+                            </td>
+                            <td>Roche<br><span style="font-size: 12px; color: var(--text-muted);">Phase 2b / EA Available</span></td>
+                            <td>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <div style="width: 80px; height: 6px; background: var(--bg-light); border-radius: 3px;"><div style="width: 85%; height: 100%; background: var(--accent-color); border-radius: 3px;"></div></div>
+                                    <strong style="color: var(--accent-color);">85%</strong>
+                                </div>
+                            </td>
+                            <td><span class="badge badge-gold">需补充数据</span></td>
+                            <td><button class="btn btn-outline" style="padding: 6px 16px; font-size: 12px;">查看入排明细</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 页面 4：数据授权与隐私管家 (Privacy) -->
+        <div id="view-privacy" class="view-section">
+            <div class="header-top">
+                <div>
+                    <h1>数据授权与隐私管家</h1>
+                    <p style="color: var(--text-muted); margin-top: 8px;">基于区块链智能合约的<strong style="color: var(--primary-color);">动态知情同意 (eConsent)</strong> 机制，您对所有数据拥有 100% 控制权。</p>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>当前生效的数据授权</h3>
+                    </div>
+                    <div style="border: 1px solid var(--border-color); padding: 20px; border-radius: 3px; margin-bottom: 16px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <h4 style="font-size: 16px; color: var(--primary-color);">A 跨国药企 - 新药外部对照组研究</h4>
+                            <span class="badge badge-green">活跃中</span>
+                        </div>
+                        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px;"><strong>授权范围：</strong>高度脱敏处理后的量表打卡记录</p>
+                        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;"><strong>权益反哺：</strong>该药企每月定向发放 400 元合规科研津贴</p>
+                        <div style="display: flex; gap: 12px;">
+                            <!-- 点击撤回的弹窗效果 -->
+                            <button class="btn btn-danger" style="padding: 6px 12px; font-size: 12px;" onclick="alert('撤回指令已通过API发送！云端关联数据正在执行物理销毁，预计10秒后生效。')">一键撤回授权</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3>合规系统安全报告</h3>
+                    </div>
+                    <ul style="list-style: none; padding: 0;">
+                        <li style="margin-bottom: 24px;">
+                            <strong style="display: block; font-size: 14px; margin-bottom: 4px;">加密状态</strong>
+                            <span style="font-size: 13px; color: var(--text-muted);">您的所有数据已采用 AES-256 银行级端到端加密，管理员也无法查看明文。</span>
+                        </li>
+                        <li>
+                            <strong style="display: block; font-size: 14px; margin-bottom: 4px;">全局管控</strong>
+                            <button class="btn btn-danger" style="width: 100%; margin-top: 10px;" onclick="alert('系统提示：您的账户及所有数据流转将被彻底销毁且无法恢复！')">冻结账户并销毁全部流转数据</button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ================= JavaScript 核心交互逻辑 ================= -->
+    <script>
+        // 这个函数负责监听鼠标点击并切换页面内容
+        function switchTab(tabId, clickedElement) {
+            
+            // 1. 找到左侧所有的导航栏按钮，去掉它们身上的 active（蓝色高亮）状态
+            const navItems = document.querySelectorAll('.nav-item');
+            navItems.forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // 2. 给当前鼠标点击的那个按钮，加上 active（让它变成蓝色高亮）
+            clickedElement.classList.add('active');
+
+            // 3. 找到右侧所有的内容模块，把它们隐藏起来
+            const views = document.querySelectorAll('.view-section');
+            views.forEach(view => {
+                view.classList.remove('active');
+            });
+
+            // 4. 根据您点击的按钮名字，找到对应的右侧内容模块，让它显示出来
+            const activeView = document.getElementById('view-' + tabId);
+            if(activeView) {
+                activeView.classList.add('active');
+            }
+        }
+    </script>
+</body>
+</html>
